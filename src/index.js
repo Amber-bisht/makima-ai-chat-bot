@@ -87,13 +87,61 @@ async function bootstrap() {
   });
   const authorizedGroups = new Set(config.authGroupIds.map(String));
 
-  const bot = new TelegramBot(config.telegramBotToken, { polling: true });
+  function isTransientPollingError(error) {
+    const msg = String(error?.message || "").toLowerCase();
+    if (
+      msg.includes("invalid token") ||
+      msg.includes("401") ||
+      msg.includes("unauthorized") ||
+      msg.includes("forbidden")
+    ) {
+      return false;
+    }
+    return (
+      msg.includes("etimedout") ||
+      msg.includes("econnreset") ||
+      msg.includes("eai_again") ||
+      msg.includes("socket hang up") ||
+      msg.includes("network")
+    );
+  }
+
+  const bot = new TelegramBot(config.telegramBotToken, {
+    polling: {
+      autoStart: true,
+      interval: 300,
+      params: { timeout: 25 }
+    }
+  });
   const botProfile = await bot.getMe();
   const botUserId = botProfile.id;
   const effectiveBotUsername =
     (config.botUsername || botProfile.username || "").replace(/^@/, "").toLowerCase() || null;
 
-  bot.on("polling_error", (error) => {
+  let pollingRestartTimer = null;
+  async function schedulePollingRestart(delayMs = 5000) {
+    if (pollingRestartTimer) return;
+    pollingRestartTimer = setTimeout(async () => {
+      pollingRestartTimer = null;
+      try {
+        const active = typeof bot.isPolling === "function" ? bot.isPolling() : false;
+        if (!active && typeof bot.startPolling === "function") {
+          await bot.startPolling();
+          console.log("Telegram polling restarted after transient error.");
+        }
+      } catch (restartError) {
+        console.error("Failed to restart Telegram polling:", restartError.message);
+        await schedulePollingRestart(8000);
+      }
+    }, delayMs);
+  }
+
+  bot.on("polling_error", async (error) => {
+    if (isTransientPollingError(error)) {
+      console.warn("Telegram polling transient error:", error.message);
+      await schedulePollingRestart();
+      return;
+    }
     console.error("Telegram polling error:", error.message);
   });
 
