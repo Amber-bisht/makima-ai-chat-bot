@@ -33,7 +33,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "src,Dockerfile,docker-compose.prod.yml,package.json,package-lock.json,.dockerignore"
+          source: "src,public,Dockerfile,docker-compose.prod.yml,package.json,package-lock.json,.dockerignore"
           target: ${{ env.APP_DIR }}
 
       - name: Deploy Container on VPS
