@@ -137,6 +137,7 @@ export class GroqService {
     groupTitle,
     currentDateTime,
     ownerFeedNotes,
+    latestOwnerFeedNote,
     ownerKnowledgeNotes,
     externalWebContext,
     sarcasmMode,
@@ -166,6 +167,9 @@ export class GroqService {
               `Write replies as if they are directly from ${ownerName} in first person.`,
               "Never mention being a bot, AI, assistant, automation, or system.",
               "Keep responses concise and useful (1-4 short sentences).",
+              "Owner /feed memory is the highest-priority source for owner status, availability, and instructions.",
+              "If asked about owner availability/status, use the latest relevant owner /feed memory and answer directly.",
+              "Do not claim uncertainty when owner /feed memory provides relevant context.",
               sarcasmMode === "sarcastic"
                 ? "Use a mildly sarcastic tone in this reply while still being helpful and respectful."
                 : "Use a straightforward, non-sarcastic tone in this reply.",
@@ -181,6 +185,7 @@ export class GroqService {
               `Incoming message: ${messageText}`,
               `Known user memory: ${JSON.stringify(memoryContext)}`,
               `Owner feed memory: ${JSON.stringify((ownerFeedNotes || []).slice(-25))}`,
+              `Latest owner feed note: ${latestOwnerFeedNote || "None"}`,
               `Shared owner knowledge (/text): ${JSON.stringify((ownerKnowledgeNotes || []).slice(-80))}`,
               `External realtime context (weather/news/wiki/tavily): ${externalWebContext || "None"}`
             ].join("\n")

@@ -1,4 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { connectMongo } from "./db/mongo.js";
 import { FastMemoryIndex } from "./services/FastMemoryIndex.js";
@@ -58,6 +60,17 @@ function formatNotificationMessage({ msg, cleanedText }) {
   ].join("\n");
 }
 
+const startImagePath = fileURLToPath(new URL("../public/image.png", import.meta.url));
+
+function startWelcomeText(user) {
+  const welcomeName = user?.username ? `@${user.username}` : displayName(user);
+  return [
+    `Welcome ${welcomeName}`,
+    `I work in @${config.ownerUsername} Telegram Groups.`,
+    `Please tag @${config.ownerUsername} or me or reply on my msg in a group to interact with me.`
+  ].join("\n");
+}
+
 async function bootstrap() {
   await connectMongo(config.mongoUri);
   console.log("Connected to MongoDB");
@@ -91,7 +104,30 @@ async function bootstrap() {
     }
   }
 
+  async function sendStartWelcome(msg) {
+    const text = startWelcomeText(msg.from);
+    if (existsSync(startImagePath)) {
+      await bot.sendPhoto(msg.chat.id, startImagePath, { caption: text });
+      return;
+    }
+    await bot.sendMessage(msg.chat.id, text);
+  }
+
   async function handleOwnerPrivateMessage(msg, text) {
+    const trimmedText = text.trim();
+    if (!trimmedText.startsWith("/")) {
+      const result = await memoryService.addOwnerFeed(config.ownerUserId, trimmedText);
+      await bot.sendMessage(
+        msg.chat.id,
+        [
+          "Feed saved.",
+          "Non-command owner DM is stored as /feed memory.",
+          `Total stored feed notes: ${result.notes.length}`
+        ].join("\n")
+      );
+      return;
+    }
+
     const command = toCommand(text);
     const args = text.trim().split(/\s+/).slice(1);
 
@@ -295,6 +331,16 @@ async function bootstrap() {
 
   async function handlePrivateMessage(msg) {
     const { text } = getMessageTextAndEntities(msg);
+    const command = text?.trim() ? toCommand(text) : "";
+
+    if (command === "/start") {
+      await sendStartWelcome(msg);
+      if (msg.from.id === config.ownerUserId) {
+        await bot.sendMessage(msg.chat.id, helpText());
+      }
+      return;
+    }
+
     if (msg.from.id === config.ownerUserId) {
       if (!text || !text.trim()) {
         await bot.sendMessage(msg.chat.id, helpText());
@@ -334,7 +380,11 @@ async function bootstrap() {
     const cleanedText = hasOwnerMention ? stripOwnerMention(text, config.ownerUsername) : text.trim();
     await memoryService.touchUser(msg.from, msg.chat);
 
-    if (isContactRequestIntent(cleanedText, config.ownerUsername)) {
+    if (
+      isContactRequestIntent(cleanedText, config.ownerUsername, {
+        isReplyToBot
+      })
+    ) {
       await bot.sendMessage(msg.chat.id, "Your message has been forwarded.", {
         reply_to_message_id: msg.message_id,
         allow_sending_without_reply: true
@@ -350,6 +400,7 @@ async function bootstrap() {
 
     const userMemory = await memoryService.getUserMemory(msg.from.id);
     const ownerFeedNotes = await memoryService.getOwnerFeed(config.ownerUserId);
+    const latestOwnerFeedNote = ownerFeedNotes.at(-1) || null;
     const ownerKnowledgeNotes = await memoryService.getOwnerKnowledge(config.ownerUserId);
     const externalWebContext = await webContextService.buildContextForMessage(cleanedText || text);
     const reply = await groqService.generateOwnerReply({
@@ -359,6 +410,7 @@ async function bootstrap() {
       groupTitle: msg.chat.title,
       currentDateTime: new Date().toISOString(),
       ownerFeedNotes,
+      latestOwnerFeedNote,
       ownerKnowledgeNotes,
       externalWebContext,
       sarcasmMode: Math.random() < 0.5 ? "sarcastic" : "neutral",
