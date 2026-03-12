@@ -271,8 +271,7 @@ export class MemoryService {
         $setOnInsert: {
           ownerUserId,
           notes: [],
-          knowledgeNotes: [],
-          ignoredUserIds: []
+          knowledgeNotes: []
         },
         $addToSet: {
           ignoredUserIds: userId
@@ -362,7 +361,6 @@ export class MemoryService {
         $setOnInsert: {
           userId: targetUserId,
           name: current.name || null,
-          about: [],
           facts: [],
           conversationSummaries: [],
           pastQuestions: []
