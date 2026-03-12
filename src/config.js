@@ -67,6 +67,8 @@ export const config = {
   authGroupIds: toNumberList(requiredEnv("AUTH_GROUP_IDS"), "AUTH_GROUP_IDS"),
   mongoUri: requiredEnv("MONGODB_URI"),
   groqApiKeys,
+  newsApiKey: process.env.NEWS_API_KEY?.trim() || null,
+  tavilyApiKey: process.env.TAVILY_API_KEY?.trim() || null,
   groqModel: process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile",
   cacheMaxUsers: Number(process.env.CACHE_MAX_USERS || 5000)
 };

@@ -42,6 +42,8 @@ npm start
 - `GROQ_API_KEYS`: Comma-separated Groq API keys for fallback (example: `key1,key2,key3`)
 - `GROQ_API_KEY`: Optional single key fallback (used only when `GROQ_API_KEYS` is not set)
 - `GROQ_MODEL`: Groq model name (default: `llama-3.3-70b-versatile`)
+- `NEWS_API_KEY`: NewsAPI key for live headlines/news questions
+- `TAVILY_API_KEY`: Tavily key for person/web fallback when Wikipedia data is missing
 - `CACHE_MAX_USERS`: Max user memories kept in in-memory index
 
 ## Behavior
@@ -59,6 +61,11 @@ npm start
       - generates owner-style reply with Groq
       - stores only meaningful memory signals (name, facts, summaries, past questions)
       - uses shared owner text knowledge (`/text`) and manual user about-data (`/data`) when relevant
+      - can enrich answers with realtime context:
+        - Open-Meteo (weather)
+        - NewsAPI (latest news)
+        - Wikipedia summary (person info)
+        - Tavily fallback (when Wikipedia is missing/insufficient)
   - if Groq key 1 is rate-limited/quota-exhausted, bot automatically retries with next key from `GROQ_API_KEYS`
   - if all Groq keys are exhausted, bot sends:
     - `Hi <name>, thanks for tagging me. Wait for sometime, I have hit my limit.`

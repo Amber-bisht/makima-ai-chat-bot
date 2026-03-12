@@ -5,6 +5,7 @@ import { FastMemoryIndex } from "./services/FastMemoryIndex.js";
 import { GroqService } from "./services/GroqService.js";
 import { isContactRequestIntent } from "./services/contactIntent.js";
 import { MemoryService } from "./services/MemoryService.js";
+import { WebContextService } from "./services/WebContextService.js";
 import {
   containsOwnerMention,
   displayName,
@@ -66,6 +67,10 @@ async function bootstrap() {
   const groqService = new GroqService({
     apiKeys: config.groqApiKeys,
     model: config.groqModel
+  });
+  const webContextService = new WebContextService({
+    newsApiKey: config.newsApiKey,
+    tavilyApiKey: config.tavilyApiKey
   });
   const authorizedGroups = new Set(config.authGroupIds.map(String));
 
@@ -346,6 +351,7 @@ async function bootstrap() {
     const userMemory = await memoryService.getUserMemory(msg.from.id);
     const ownerFeedNotes = await memoryService.getOwnerFeed(config.ownerUserId);
     const ownerKnowledgeNotes = await memoryService.getOwnerKnowledge(config.ownerUserId);
+    const externalWebContext = await webContextService.buildContextForMessage(cleanedText || text);
     const reply = await groqService.generateOwnerReply({
       assistantName: config.assistantName,
       ownerName: config.ownerName,
@@ -354,6 +360,7 @@ async function bootstrap() {
       currentDateTime: new Date().toISOString(),
       ownerFeedNotes,
       ownerKnowledgeNotes,
+      externalWebContext,
       sarcasmMode: Math.random() < 0.5 ? "sarcastic" : "neutral",
       messageText: cleanedText || text,
       userMemory,

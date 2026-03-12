@@ -138,6 +138,7 @@ export class GroqService {
     currentDateTime,
     ownerFeedNotes,
     ownerKnowledgeNotes,
+    externalWebContext,
     sarcasmMode,
     messageText,
     userMemory,
@@ -180,7 +181,8 @@ export class GroqService {
               `Incoming message: ${messageText}`,
               `Known user memory: ${JSON.stringify(memoryContext)}`,
               `Owner feed memory: ${JSON.stringify((ownerFeedNotes || []).slice(-25))}`,
-              `Shared owner knowledge (/text): ${JSON.stringify((ownerKnowledgeNotes || []).slice(-80))}`
+              `Shared owner knowledge (/text): ${JSON.stringify((ownerKnowledgeNotes || []).slice(-80))}`,
+              `External realtime context (weather/news/wiki/tavily): ${externalWebContext || "None"}`
             ].join("\n")
           }
         ]
