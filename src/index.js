@@ -23,7 +23,7 @@ function helpText() {
   return [
     "Owner commands:",
     "/stats",
-    "/memory [user_id]",
+    "/memory [user_id|object_id]",
     "/feed <text>",
     "/feed",
     "/text <knowledge>",
@@ -112,17 +112,14 @@ async function bootstrap() {
 
     if (command === "/memory") {
       if (args[0]) {
-        const userId = Number(args[0]);
-        if (!Number.isFinite(userId)) {
-          await bot.sendMessage(msg.chat.id, "Usage: /memory <user_id>");
-          return;
-        }
-        const memory = await memoryService.getUserMemory(userId);
+        const lookup = args[0].trim();
+        const memory = await memoryService.getUserMemoryByLookup(lookup);
         if (!memory) {
-          await bot.sendMessage(msg.chat.id, `No memory found for user ${userId}.`);
+          await bot.sendMessage(msg.chat.id, `No memory found for lookup ${lookup}.`);
           return;
         }
         const details = [
+          `_id: ${memory._id || "Unknown"}`,
           `User ID: ${memory.userId}`,
           `Name: ${memory.name || "Unknown"}`,
           `Username: ${memory.username ? `@${memory.username}` : "Unknown"}`,
@@ -230,9 +227,14 @@ async function bootstrap() {
       }
 
       const updated = await memoryService.addUserManualData(userId, manualText);
+      const latestAbout = (updated.about || []).slice(-3);
       await bot.sendMessage(
         msg.chat.id,
-        `Manual user data saved for ${userId}.\nAbout entries: ${(updated.about || []).length}`
+        [
+          `Manual user data saved for ${userId}.`,
+          `About entries: ${(updated.about || []).length}`,
+          `Latest about: ${latestAbout.join(" | ") || "None"}`
+        ].join("\n")
       );
       return;
     }

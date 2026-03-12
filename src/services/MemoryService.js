@@ -121,6 +121,24 @@ export class MemoryService {
     return doc;
   }
 
+  async getUserMemoryByLookup(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return null;
+
+    if (/^-?\d+$/.test(raw)) {
+      return this.getUserMemory(Number(raw));
+    }
+
+    if (/^[a-fA-F0-9]{24}$/.test(raw)) {
+      const doc = await UserMemory.findById(raw).lean();
+      if (!doc) return null;
+      this.cache.set(doc.userId, doc);
+      return doc;
+    }
+
+    return null;
+  }
+
   async mergeExtractedMemory(userId, extracted) {
     if (!extracted || !extracted.shouldStore) return this.getUserMemory(userId);
 

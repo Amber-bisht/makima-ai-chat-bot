@@ -75,7 +75,7 @@ npm start
 ## Owner Commands (DM only)
 - `/stats`
 - `/memory`
-- `/memory <user_id>`
+- `/memory <user_id|object_id>`
 - `/feed <text>` (add owner context/instructions used in future replies)
 - `/feed` (view latest stored owner feed memory)
 - `/text <knowledge>` (store shared knowledge for all future replies)
