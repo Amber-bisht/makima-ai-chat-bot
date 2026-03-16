@@ -426,8 +426,13 @@ async function bootstrap() {
     if (!text || !text.trim()) return;
 
     const command = toCommand(text);
-    if (["/rules", "/ban", "/fban"].includes(command)) {
+    if (["/rules", "/ban", "/fban", "/id"].includes(command)) {
        try {
+         if (command === "/id") {
+           await bot.sendMessage(msg.chat.id, `This Chat's ID is: ${msg.chat.id}`);
+           return;
+         }
+         
          const chatAdmins = await bot.getChatAdministrators(msg.chat.id);
          const isAdminOrOwner = msg.from.id === config.ownerUserId || chatAdmins.some(admin => admin.user.id === msg.from.id);
          
