@@ -418,12 +418,16 @@ async function bootstrap() {
   }
 
   async function handleGroupMessage(msg) {
-    if (!authorizedGroups.has(String(msg.chat.id))) return;
+    if (!authorizedGroups.has(String(msg.chat.id))) {
+      return;
+    }
 
     if (msg.new_chat_members) {
+      console.log("[DEBUG] Received new_chat_members event for chat:", msg.chat.id, "Members:", msg.new_chat_members.map(m => m.id));
       try {
         const rules = await memoryService.getGroupRules(msg.chat.id);
         if (rules && rules.rulesText) {
+          console.log("[DEBUG] Found rules for chat, triggering welcome...");
           for (const member of msg.new_chat_members) {
             if (member.is_bot) continue;
             let welcomeText = rules.rulesText
@@ -439,7 +443,10 @@ async function bootstrap() {
               };
             }
             await bot.sendMessage(msg.chat.id, welcomeText, options);
+            console.log("[DEBUG] Welcome message sent to", member.id);
           }
+        } else {
+          console.log("[DEBUG] No rules found for chat", msg.chat.id);
         }
       } catch (err) {
         console.error("Welcome message error:", err.message);
@@ -590,6 +597,9 @@ async function bootstrap() {
 
   bot.on("message", async (msg) => {
     try {
+      if (msg.new_chat_members) {
+        console.log("[DEBUG] Root message handler caught new_chat_members event.", msg.chat.id);
+      }
       if (msg.new_chat_members && isGroupChat(msg.chat.type)) {
          await handleGroupMessage(msg);
          return;
