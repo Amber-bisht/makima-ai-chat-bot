@@ -435,10 +435,24 @@ async function bootstrap() {
     if (!text || !text.trim()) return;
 
     const command = toCommand(text);
-    if (["/rules", "/ban", "/fban", "/id"].includes(command)) {
+    if (["/rules", "/ban", "/fban", "/id", "/check_bot"].includes(command)) {
        try {
          if (command === "/id") {
            await bot.sendMessage(msg.chat.id, `This Chat's ID is: ${msg.chat.id}`);
+           return;
+         }
+
+         if (command === "/check_bot") {
+           const botMember = await bot.getChatMember(msg.chat.id, config.botUserId || (await bot.getMe()).id);
+           const rules = await memoryService.getGroupRules(msg.chat.id);
+           const isAuth = authorizedGroups.has(String(msg.chat.id));
+           
+           let status = `🤖 **Bot Status for this Group:**\n`;
+           status += `- **Authorized:** ${isAuth ? "✅ Yes" : "❌ No"}\n`;
+           status += `- **Bot Permissions:** ${botMember.status === "administrator" || botMember.status === "creator" ? "✅ Admin" : "❌ Not Admin"} (${botMember.status})\n`;
+           status += `- **Welcome Rules Set:** ${rules && rules.rulesText ? "✅ Yes" : "❌ No"}\n`;
+           
+           await bot.sendMessage(msg.chat.id, status, { parse_mode: "Markdown" });
            return;
          }
          
@@ -720,6 +734,17 @@ async function bootstrap() {
   console.log(
     `Bot is running as ${config.assistantName} (@${botProfile.username || "unknown"}). Authorized groups: ${config.authGroupIds.join(", ")}`
   );
+
+  // Diagnostic check for all authorized groups
+  for (const gid of config.authGroupIds) {
+    try {
+      const chat = await bot.getChat(gid);
+      const member = await bot.getChatMember(gid, botUserId);
+      console.log(`[BOOTSTRAP] Group ${gid} (${chat.title || "No Title"}): Bot status is "${member.status}". Admin: ${member.status === "administrator" || member.status === "creator"}`);
+    } catch (err) {
+      console.error(`[BOOTSTRAP] Error checking group ${gid}: ${err.message}`);
+    }
+  }
 }
 
 bootstrap().catch((error) => {
