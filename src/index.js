@@ -596,7 +596,10 @@ async function bootstrap() {
             if (member.is_bot) continue;
             let welcomeText = rules.rulesText
               .replace(/\{name\}/ig, member.first_name || "")
-              .replace(/\{username\}/ig, member.username ? `@${member.username}` : "");
+              .replace(/\{username\}/ig, member.username ? (member.username.startsWith("@") ? member.username : `@${member.username}`) : "");
+            
+            // Fix double-@ if user wrote @{username}
+            welcomeText = welcomeText.replace(/@@/g, "@");
               
             const options = {};
             if (rules.rulesButtons && rules.rulesButtons.length > 0) {
@@ -644,12 +647,16 @@ async function bootstrap() {
       const newStatus = msg.new_chat_member?.status;
       const oldStatus = msg.old_chat_member?.status;
       
-      // A user joined if they transitioned from left/kicked to member/restricted
+      // Log exactly what happened for debugging supergroups
+      console.log(`[DEBUG] Member ${msg.new_chat_member?.user?.id} transition: ${oldStatus} -> ${newStatus}`);
+
+      // A user joined if they transitioned to member/restricted from anything else
       const isNewJoin = 
         (newStatus === "member" || newStatus === "restricted") && 
-        (oldStatus === "left" || oldStatus === "kicked" || !oldStatus);
+        (oldStatus !== "member" && oldStatus !== "restricted" && oldStatus !== "administrator" && oldStatus !== "creator");
         
       if (!isNewJoin) {
+         console.log("[DEBUG] Skipping: Not a fresh join event.");
          return;
       }
 
@@ -661,7 +668,9 @@ async function bootstrap() {
       if (rules && rules.rulesText) {
           let welcomeText = rules.rulesText
             .replace(/\{name\}/ig, member.first_name || "")
-            .replace(/\{username\}/ig, member.username ? `@${member.username}` : "");
+            .replace(/\{username\}/ig, member.username ? (member.username.startsWith("@") ? member.username : `@${member.username}`) : "");
+          
+          welcomeText = welcomeText.replace(/@@/g, "@");
             
           const options = {};
           if (rules.rulesButtons && rules.rulesButtons.length > 0) {
