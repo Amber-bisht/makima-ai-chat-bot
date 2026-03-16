@@ -106,14 +106,25 @@ async function bootstrap() {
     );
   }
 
+  // CRITICAL: Reset Telegram's cached allowed_updates before starting polling.
+  // Without this, Telegram server may use old cached settings that exclude 'chat_member'.
+  {
+    const tempBot = new TelegramBot(config.telegramBotToken);
+    try {
+      await tempBot.deleteWebhook({ drop_pending_updates: false });
+      console.log("[STARTUP] Webhook cleared. Telegram will use fresh allowed_updates on next poll.");
+    } catch (e) {
+      console.warn("[STARTUP] Could not clear webhook:", e.message);
+    }
+  }
+
   const bot = new TelegramBot(config.telegramBotToken, {
     polling: {
       autoStart: true,
       interval: 300,
       params: { 
         timeout: 25,
-        allowed_updates: ["message", "edited_message", "channel_post", "edited_channel_post", "inline_query", "chosen_inline_result", "callback_query", "shipping_query", "pre_checkout_query", "poll", "poll_answer", "my_chat_member", "chat_member", "chat_join_request"],
-        allowedUpdates: ["message", "edited_message", "channel_post", "edited_channel_post", "inline_query", "chosen_inline_result", "callback_query", "shipping_query", "pre_checkout_query", "poll", "poll_answer", "my_chat_member", "chat_member", "chat_join_request"]
+        allowed_updates: ["message", "edited_message", "channel_post", "edited_channel_post", "inline_query", "chosen_inline_result", "callback_query", "shipping_query", "pre_checkout_query", "poll", "poll_answer", "my_chat_member", "chat_member", "chat_join_request"]
       }
     }
   });
@@ -441,7 +452,7 @@ async function bootstrap() {
     if (!text || !text.trim()) return;
 
     const command = toCommand(text);
-    if (["/rules", "/ban", "/fban", "/id", "/check_bot"].includes(command)) {
+    if (["/rules", "/ban", "/fban", "/id", "/check_bot", "/test_welcome"].includes(command)) {
        try {
          if (command === "/id") {
            await bot.sendMessage(msg.chat.id, `This Chat's ID is: ${msg.chat.id}`);
