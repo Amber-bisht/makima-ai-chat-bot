@@ -628,7 +628,7 @@ async function bootstrap() {
       }
       if (isGroupChat(msg.chat.type)) {
         if (!authorizedGroups.has(String(msg.chat.id))) {
-          console.log(`[DEBUG] Ignoring group message: Chat ID ${msg.chat.id} not authorized.`);
+          // Log only once per group to avoid spam, but we need to know if we're seeing it
           return;
         }
         await handleGroupMessage(msg);
@@ -638,24 +638,25 @@ async function bootstrap() {
     }
   });
 
+  bot.on("my_chat_member", (msg) => {
+    console.log(`[DEBUG] my_chat_member event: Bot status in ${msg.chat.id} changed to ${msg.new_chat_member.status}`);
+  });
+
   // 2. Dedicated chat_member event hook
   bot.on("chat_member", async (msg) => {
     try {
-      console.log(`[DEBUG] chat_member event received. Chat ID: ${msg.chat?.id}, From: ${msg.from?.id}`);
-      console.log(`[DEBUG] Full Event Payload: ${JSON.stringify(msg)}`);
+      const newStatus = msg.new_chat_member?.status;
+      const oldStatus = msg.old_chat_member?.status;
+      const memberId = msg.new_chat_member?.user?.id;
+
+      console.log(`[DEBUG] chat_member event: User ${memberId} in Chat ${msg.chat?.id} changed: ${oldStatus} -> ${newStatus}`);
       
       if (!authorizedGroups.has(String(msg.chat.id))) {
-        console.log(`[DEBUG] Ignoring chat_member: Chat ID ${msg.chat.id} not authorized.`);
         return;
       }
       
-      console.log("[DEBUG] chat_member event fired. New status:", msg.new_chat_member?.status, "Old:", msg.old_chat_member?.status);
-      
-      const newStatus = msg.new_chat_member?.status;
-      const oldStatus = msg.old_chat_member?.status;
-      
-      // Log exactly what happened for debugging supergroups
-      console.log(`[DEBUG] Member ${msg.new_chat_member?.user?.id} transition: ${oldStatus} -> ${newStatus}`);
+      // Log transition again with specialized wording for debugging
+      console.log(`[DEBUG] Member ${memberId} transition in authorized chat: ${oldStatus} -> ${newStatus}`);
 
       // A user joined if they transitioned to member/restricted from anything else
       const isNewJoin = 
