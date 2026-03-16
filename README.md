@@ -61,6 +61,7 @@ npm start
       - generates owner-style reply with Groq
       - stores only meaningful memory signals (name, facts, summaries, past questions)
       - uses shared owner text knowledge (`/text`) and manual user about-data (`/data`) when relevant
+      - **Group Context**: The bot remembers the last 15-20 messages in the group, allowing it to follow conversations even if only the final message mentions the owner.
       - can enrich answers with realtime context:
         - Open-Meteo (weather)
         - NewsAPI (latest news)
@@ -92,9 +93,24 @@ npm start
 - `/clear_user <user_id>`
 - `/reply <user_id> <message>`
 
+## Group Admin Commands (Owner or Group Admins)
+- `/rules <welcome text> {Button Name https://url}`: Sets the welcome message and optional inline buttons.
+  - Use `{name}` for the user's first name and `{username}` for their @username.
+  - Example: `/rules Welcome {name}! {Support https://t.me/support}`
+- `/test_welcome`: Displays the current welcome message as a test.
+- `/check_bot`: Verify bot permissions and authorization in the current group.
+- `/id`: Show the current Chat ID.
+- `/mute`: (Reply only) Mutes the replied-to user (removes all sending permissions).
+- `/unmute`: (Reply only) Unmutes the replied-to user.
+- `/ban`: (Reply only) Bans the replied-to user from the current group.
+- `/unban`: (Reply only) Unbans the replied-to user in the current group.
+- `/fban`: (Reply only) Bans the user from **all** authorized groups (Federal Ban).
+- `/funban`: (Reply only) Unbans the user from **all** authorized groups (Federal Unban).
+
 ## Notes
 - For `/reply <user_id> ...`, the recipient must have already started the bot in DM.
 - Make sure the bot is added to groups and allowed to read group messages.
+- For moderation commands like `/ban` or `/mute`, the bot must be an administrator in the group.
 - Example feed:
   - `/feed - Hello Makima, I am XYZ, I am interested in DevOps, I am busy tonight; if someone asks, say boss is busy and will message later.`
 

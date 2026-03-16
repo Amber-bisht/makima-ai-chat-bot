@@ -469,7 +469,7 @@ async function bootstrap() {
     if (!text || !text.trim()) return;
 
     const command = toCommand(text);
-    if (["/rules", "/ban", "/fban", "/id", "/check_bot", "/test_welcome"].includes(command)) {
+    if (["/rules", "/ban", "/fban", "/mute", "/unmute", "/unban", "/funban", "/id", "/check_bot", "/test_welcome"].includes(command)) {
        try {
          if (command === "/id") {
            await bot.sendMessage(msg.chat.id, `This Chat's ID is: ${msg.chat.id}`);
@@ -582,6 +582,78 @@ async function bootstrap() {
                  }
                }
                await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been forcefully banned from ${bannedCount} authorized group(s).`);
+               return;
+            }
+
+            if (command === "/unban") {
+               const targetUser = msg.reply_to_message?.from;
+               if (!targetUser) {
+                 await bot.sendMessage(msg.chat.id, "Reply to a message to /unban that user.");
+                 return;
+               }
+               await bot.unbanChatMember(msg.chat.id, targetUser.id, { only_if_banned: true });
+               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been unbanned from this group.`);
+               return;
+            }
+
+            if (command === "/funban") {
+               const targetUser = msg.reply_to_message?.from;
+               if (!targetUser) {
+                 await bot.sendMessage(msg.chat.id, "Reply to a message to /funban that user.");
+                 return;
+               }
+               let unbannedCount = 0;
+               for (const gid of config.authGroupIds) {
+                 try {
+                   await bot.unbanChatMember(gid, targetUser.id, { only_if_banned: true });
+                   unbannedCount++;
+                 } catch (err) {
+                   // ignore errors
+                 }
+               }
+               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been forcefully unbanned from ${unbannedCount} authorized group(s).`);
+               return;
+            }
+
+            if (command === "/mute") {
+               const targetUser = msg.reply_to_message?.from;
+               if (!targetUser) {
+                 await bot.sendMessage(msg.chat.id, "Reply to a user to /mute them.");
+                 return;
+               }
+               await bot.restrictChatMember(msg.chat.id, targetUser.id, {
+                 permissions: {
+                   can_send_messages: false,
+                   can_send_media_messages: false,
+                   can_send_polls: false,
+                   can_send_other_messages: false,
+                   can_add_web_page_previews: false,
+                   can_change_info: false,
+                   can_invite_users: false,
+                   can_pin_messages: false
+                 }
+               });
+               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been muted in this group.`);
+               return;
+            }
+
+            if (command === "/unmute") {
+               const targetUser = msg.reply_to_message?.from;
+               if (!targetUser) {
+                 await bot.sendMessage(msg.chat.id, "Reply to a user to /unmute them.");
+                 return;
+               }
+               await bot.restrictChatMember(msg.chat.id, targetUser.id, {
+                 permissions: {
+                   can_send_messages: true,
+                   can_send_media_messages: true,
+                   can_send_polls: true,
+                   can_send_other_messages: true,
+                   can_add_web_page_previews: true,
+                   can_invite_users: true
+                 }
+               });
+               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been unmuted in this group.`);
                return;
             }
          }
