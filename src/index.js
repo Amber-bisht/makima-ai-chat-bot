@@ -515,7 +515,7 @@ async function bootstrap() {
     if (!text || !text.trim()) return;
 
     const command = toCommand(text);
-    if (["/rules", "/ban", "/fban", "/mute", "/unmute", "/unban", "/funban", "/id", "/check_bot", "/test_welcome", "/purge"].includes(command)) {
+    if (["/rules", "/ban", "/fban", "/mute", "/unmute", "/unban", "/funban", "/id", "/check_bot", "/test_welcome", "/purge", "/dban"].includes(command)) {
        try {
          if (command === "/id") {
            await bot.sendMessage(msg.chat.id, `This Chat's ID is: ${msg.chat.id}`);
@@ -609,6 +609,19 @@ async function bootstrap() {
                }
                await bot.banChatMember(msg.chat.id, targetUser.id);
                await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been banned from this group.`);
+               return;
+            }
+
+            if (command === "/dban") {
+               const targetMessage = msg.reply_to_message;
+               const targetUser = targetMessage?.from;
+               if (!targetUser) {
+                 await bot.sendMessage(msg.chat.id, "Reply to a user's message to /dban them.");
+                 return;
+               }
+               await bot.banChatMember(msg.chat.id, targetUser.id).catch(() => {});
+               await bot.deleteMessage(msg.chat.id, targetMessage.message_id).catch(() => {});
+               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been banned from this group and their message deleted.`);
                return;
             }
 
@@ -718,6 +731,8 @@ async function bootstrap() {
                   return;
                }
                
+               await bot.sendMessage(msg.chat.id, "You've sent `/purge`, I'm processing that command.");
+
                try {
                  const idsToDelete = [];
                  for(let i = startId; i <= endId; i++) {
