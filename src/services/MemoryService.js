@@ -438,8 +438,7 @@ export class MemoryService {
         $setOnInsert: {
           userId: targetUserId,
           messageCount: 0,
-          contactRequestCount: 0,
-          warnings: 0
+          contactRequestCount: 0
         },
         $inc: { warnings: 1 }
       },

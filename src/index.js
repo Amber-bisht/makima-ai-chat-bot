@@ -515,7 +515,7 @@ async function bootstrap() {
     if (!text || !text.trim()) return;
 
     const command = toCommand(text);
-    if (["/rules", "/ban", "/fban", "/mute", "/unmute", "/unban", "/funban", "/id", "/check_bot", "/test_welcome", "/purge", "/dban", "/warn", "/unwarn"].includes(command)) {
+    if (["/rules", "/ban", "/fban", "/mute", "/unmute", "/unban", "/funban", "/id", "/check_bot", "/test_welcome", "/purge", "/dban", "/warn", "/unwarn", "/kick"].includes(command)) {
        try {
          if (command === "/id") {
            await bot.sendMessage(msg.chat.id, `This Chat's ID is: ${msg.chat.id}`);
@@ -639,6 +639,18 @@ async function bootstrap() {
                await bot.banChatMember(msg.chat.id, targetUser.id).catch(() => {});
                await bot.deleteMessage(msg.chat.id, targetMessage.message_id).catch(() => {});
                await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been banned from this group and their message deleted.`);
+               return;
+            }
+
+            if (command === "/kick") {
+               const targetUser = await resolveTargetUser();
+               if (!targetUser) {
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /kick them.");
+                 return;
+               }
+               await bot.banChatMember(msg.chat.id, targetUser.id).catch(() => {});
+               await bot.unbanChatMember(msg.chat.id, targetUser.id).catch(() => {});
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been kicked from this group.`);
                return;
             }
 
