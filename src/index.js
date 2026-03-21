@@ -515,7 +515,7 @@ async function bootstrap() {
     if (!text || !text.trim()) return;
 
     const command = toCommand(text);
-    if (["/rules", "/ban", "/fban", "/mute", "/unmute", "/unban", "/funban", "/id", "/check_bot", "/test_welcome", "/purge", "/dban"].includes(command)) {
+    if (["/rules", "/ban", "/fban", "/mute", "/unmute", "/unban", "/funban", "/id", "/check_bot", "/test_welcome", "/purge", "/dban", "/warn", "/unwarn"].includes(command)) {
        try {
          if (command === "/id") {
            await bot.sendMessage(msg.chat.id, `This Chat's ID is: ${msg.chat.id}`);
@@ -565,6 +565,23 @@ async function bootstrap() {
          const isAdminOrOwner = msg.from.id === config.ownerUserId || chatAdmins.some(admin => admin.user.id === msg.from.id);
          
          if (isAdminOrOwner) {
+            const args = text.trim().split(/\s+/).slice(1);
+            const resolveTargetUser = async () => {
+              if (msg.reply_to_message?.from) {
+                return msg.reply_to_message.from;
+              }
+              const input = args[0];
+              if (!input) return null;
+              if (/^-?\d+$/.test(input)) {
+                return { id: Number(input), first_name: `User ${input}` };
+              }
+              if (input.startsWith('@')) {
+                const userId = await memoryService.getUserIdByUsername(input);
+                if (userId) return { id: userId, first_name: input };
+              }
+              return null;
+            };
+
             if (command === "/rules") {
                const rulesContent = text.substring(text.indexOf(" ") + 1).trim();
                if (!rulesContent || command === text.trim()) {
@@ -602,33 +619,33 @@ async function bootstrap() {
             }
 
             if (command === "/ban") {
-               const targetUser = msg.reply_to_message?.from;
+               const targetUser = await resolveTargetUser();
                if (!targetUser) {
-                 await bot.sendMessage(msg.chat.id, "Reply to a user to /ban them.");
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /ban them.");
                  return;
                }
                await bot.banChatMember(msg.chat.id, targetUser.id);
-               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been banned from this group.`);
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been banned from this group.`);
                return;
             }
 
             if (command === "/dban") {
                const targetMessage = msg.reply_to_message;
-               const targetUser = targetMessage?.from;
-               if (!targetUser) {
+               const targetUser = await resolveTargetUser();
+               if (!targetUser || !targetMessage) {
                  await bot.sendMessage(msg.chat.id, "Reply to a user's message to /dban them.");
                  return;
                }
                await bot.banChatMember(msg.chat.id, targetUser.id).catch(() => {});
                await bot.deleteMessage(msg.chat.id, targetMessage.message_id).catch(() => {});
-               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been banned from this group and their message deleted.`);
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been banned from this group and their message deleted.`);
                return;
             }
 
             if (command === "/fban") {
-               const targetUser = msg.reply_to_message?.from;
+               const targetUser = await resolveTargetUser();
                if (!targetUser) {
-                 await bot.sendMessage(msg.chat.id, "Reply to a user to /fban them.");
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /fban them.");
                  return;
                }
                let bannedCount = 0;
@@ -637,28 +654,27 @@ async function bootstrap() {
                    await bot.banChatMember(gid, targetUser.id);
                    bannedCount++;
                  } catch (err) {
-                   // ignore errors if bot can't ban in some groups
                  }
                }
-               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been forcefully banned from ${bannedCount} authorized group(s).`);
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been forcefully banned from ${bannedCount} authorized group(s).`);
                return;
             }
 
             if (command === "/unban") {
-               const targetUser = msg.reply_to_message?.from;
+               const targetUser = await resolveTargetUser();
                if (!targetUser) {
-                 await bot.sendMessage(msg.chat.id, "Reply to a message to /unban that user.");
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /unban that user.");
                  return;
                }
                await bot.unbanChatMember(msg.chat.id, targetUser.id, { only_if_banned: true });
-               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been unbanned from this group.`);
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been unbanned from this group.`);
                return;
             }
 
             if (command === "/funban") {
-               const targetUser = msg.reply_to_message?.from;
+               const targetUser = await resolveTargetUser();
                if (!targetUser) {
-                 await bot.sendMessage(msg.chat.id, "Reply to a message to /funban that user.");
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /funban that user.");
                  return;
                }
                let unbannedCount = 0;
@@ -667,17 +683,16 @@ async function bootstrap() {
                    await bot.unbanChatMember(gid, targetUser.id, { only_if_banned: true });
                    unbannedCount++;
                  } catch (err) {
-                   // ignore errors
                  }
                }
-               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been forcefully unbanned from ${unbannedCount} authorized group(s).`);
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been forcefully unbanned from ${unbannedCount} authorized group(s).`);
                return;
             }
 
             if (command === "/mute") {
-               const targetUser = msg.reply_to_message?.from;
+               const targetUser = await resolveTargetUser();
                if (!targetUser) {
-                 await bot.sendMessage(msg.chat.id, "Reply to a user to /mute them.");
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /mute them.");
                  return;
                }
                await bot.restrictChatMember(msg.chat.id, targetUser.id, {
@@ -692,14 +707,14 @@ async function bootstrap() {
                    can_pin_messages: false
                  })
                });
-               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been muted in this group.`);
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been muted in this group.`);
                return;
             }
 
             if (command === "/unmute") {
-               const targetUser = msg.reply_to_message?.from;
+               const targetUser = await resolveTargetUser();
                if (!targetUser) {
-                 await bot.sendMessage(msg.chat.id, "Reply to a user to /unmute them.");
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /unmute them.");
                  return;
                }
                await bot.restrictChatMember(msg.chat.id, targetUser.id, {
@@ -714,7 +729,34 @@ async function bootstrap() {
                    can_pin_messages: true
                  })
                });
-               await bot.sendMessage(msg.chat.id, `User ${displayName(targetUser)} has been unmuted in this group.`);
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been unmuted in this group.`);
+               return;
+            }
+
+            if (command === "/warn") {
+               const targetUser = await resolveTargetUser();
+               if (!targetUser) {
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /warn them.");
+                 return;
+               }
+               const warnings = await memoryService.addWarning(targetUser.id);
+               if (warnings >= 3) {
+                 await bot.banChatMember(msg.chat.id, targetUser.id).catch(() => {});
+                 await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has reached ${warnings} warnings and has been banned.`);
+               } else {
+                 await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name} has been warned. Total warnings: ${warnings}/3.`);
+               }
+               return;
+            }
+
+            if (command === "/unwarn") {
+               const targetUser = await resolveTargetUser();
+               if (!targetUser) {
+                 await bot.sendMessage(msg.chat.id, "Reply to a user or specify @username/ID to /unwarn them.");
+                 return;
+               }
+               const warnings = await memoryService.removeWarning(targetUser.id);
+               await bot.sendMessage(msg.chat.id, `User ${targetUser.first_name}'s warning has been removed. Total warnings: ${warnings}/3.`);
                return;
             }
 

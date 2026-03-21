@@ -421,6 +421,50 @@ export class MemoryService {
     };
   }
 
+  async getUserIdByUsername(username) {
+    if (!username) return null;
+    const clean = String(username).replace(/^@/, '');
+    const doc = await UserMemory.findOne({ username: { $regex: new RegExp(`^${clean}$`, 'i') } }).lean();
+    return doc?.userId || null;
+  }
+
+  async addWarning(userId) {
+    const targetUserId = Number(userId);
+    if (!Number.isFinite(targetUserId)) return 0;
+    
+    const updated = await UserMemory.findOneAndUpdate(
+      { userId: targetUserId },
+      {
+        $setOnInsert: {
+          userId: targetUserId,
+          messageCount: 0,
+          contactRequestCount: 0,
+          warnings: 0
+        },
+        $inc: { warnings: 1 }
+      },
+      { upsert: true, new: true, lean: true }
+    );
+    this.cache.set(targetUserId, updated);
+    return updated.warnings;
+  }
+
+  async removeWarning(userId) {
+    const targetUserId = Number(userId);
+    if (!Number.isFinite(targetUserId)) return 0;
+    
+    const doc = await UserMemory.findOne({ userId: targetUserId }).lean();
+    if (!doc || !doc.warnings) return 0;
+
+    const updated = await UserMemory.findOneAndUpdate(
+      { userId: targetUserId },
+      { $inc: { warnings: -1 } },
+      { new: true, lean: true }
+    );
+    this.cache.set(targetUserId, updated);
+    return updated.warnings;
+  }
+
   async addUserManualData(userId, rawText) {
     const targetUserId = Number(userId);
     if (!Number.isFinite(targetUserId)) {

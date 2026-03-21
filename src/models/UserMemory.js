@@ -21,6 +21,7 @@ const UserMemorySchema = new mongoose.Schema(
     lastSeenGroup: { type: GroupInfoSchema, default: null },
     messageCount: { type: Number, default: 0 },
     contactRequestCount: { type: Number, default: 0 },
+    warnings: { type: Number, default: 0 },
     lastInteractionAt: { type: Date, default: null }
   },
   { timestamps: true }
