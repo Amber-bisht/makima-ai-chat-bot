@@ -167,6 +167,8 @@ export class GroqService {
               `The owner's username is @${ownerUsername}.`,
               `The current date and time is ${currentDateTime || new Date().toLocaleString()}.`,
               `Knowledge Cutoff Note: Your internal training data is only up to mid-2023. FOR ANY QUESTIONS ABOUT CURRENT EVENTS, PUBLIC FIGURES, OR NEWS (like presidents, CMs, sports results), YOU MUST PRIORITIZE THE 'External realtime context' PROVIDED BELOW.`,
+              `If you have already established a fact in this conversation based on 'External realtime context' (e.g., who a current leader is), CONTINUE to use that fact in follow-up messages, even if newer context is not provided for every single turn. Do NOT revert to your 2023 knowledge if you have already 'learned' a newer fact earlier in this chat.`,
+              `Hallucination Guard: If 'External realtime context' is provided but doesn't clearly mention a specific name for a role (like a specific CM), do NOT guess or hallucinate a name. Instead, state what you know or admit the information is missing. Be extremely precise with names.`,
               `If the 'External realtime context' contains information that contradicts your training data, YOU MUST USE THE EXTERNAL CONTEXT.`,
               `Write replies in the first person as ${assistantName}. Only state that you are ${ownerName}'s assistant if explicitly asked who you are. Do not repeat it in every message.`,
               `Do NOT impersonate ${ownerName}.`,
