@@ -1,3 +1,5 @@
+import { search, SafeSearchType } from "duck-duck-scrape";
+
 function compactText(value, maxLen = 300) {
   if (!value) return "";
   const cleaned = String(value).replace(/\s+/g, " ").trim();
@@ -215,6 +217,48 @@ export class WebContextService {
     }
   }
 
+  async scrapeWithJina(url) {
+    if (!url) return null;
+    try {
+      const response = await fetch(`https://r.jina.ai/${url}`, {
+        headers: { "X-No-Cache": "true" }
+      });
+      if (!response.ok) return null;
+      const text = await response.text();
+      return compactText(text, 2500); // Jina gives clean markdown
+    } catch {
+      return null;
+    }
+  }
+
+  async getDuckDuckGoSummary(query) {
+    try {
+      const results = await search(query, {
+        safeSearch: SafeSearchType.STRICT
+      });
+
+      const topResult = results.results?.[0];
+      if (!topResult?.url) return null;
+
+      const content = await this.scrapeWithJina(topResult.url);
+      if (!content) {
+        // Fallback to the snippet if Jina fails
+        return {
+          source: "DuckDuckGo",
+          text: compactText(topResult.description || topResult.title, 500)
+        };
+      }
+
+      return {
+        source: `Web (${topResult.title})`,
+        text: content
+      };
+    } catch (err) {
+      console.error("DDG search failed:", err.message);
+      return null;
+    }
+  }
+
   async getWeatherContext(locationQuery) {
     if (!locationQuery) return null;
     try {
@@ -292,10 +336,21 @@ export class WebContextService {
     const searchQuery = factualQuery || personQuery;
 
     if (searchQuery) {
-      const tavily = await this.getTavilySummary(searchQuery);
-      if (tavily?.text) {
-        sections.push(`Real-time info (${tavily.source}): ${tavily.text}`);
-      } else {
+      // 1. Try DuckDuckGo + Jina first (Free & High Quality)
+      const ddg = await this.getDuckDuckGoSummary(searchQuery);
+      if (ddg?.text) {
+        sections.push(`Real-time info (${ddg.source}): ${ddg.text}`);
+      } 
+      // 2. Fallback to Tavily if DDG failed and key exists
+      else if (this.tavilyApiKey) {
+        const tavily = await this.getTavilySummary(searchQuery);
+        if (tavily?.text) {
+          sections.push(`Real-time info (${tavily.source}): ${tavily.text}`);
+        }
+      }
+      
+      // 3. Last fallback to Wikipedia if everything else failed
+      if (sections.length === 0) {
         const wiki = await this.getWikipediaSummary(searchQuery);
         if (wiki?.text) {
           sections.push(`Reference info (${wiki.source}): ${wiki.text}`);

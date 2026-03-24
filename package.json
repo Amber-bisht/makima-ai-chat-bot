@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.5",
+    "duck-duck-scrape": "^2.2.7",
     "groq-sdk": "^0.15.0",
     "mongoose": "^8.7.1",
     "node-telegram-bot-api": "^0.66.0"
