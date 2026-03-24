@@ -81,23 +81,15 @@ npm start
     - "group-only" + "private chat not supported" guidance
 
 ## Owner Commands (DM only)
-- `/stats`
-- `/memory`
-- `/memory <user_id|object_id>`
-- `/feed <text>` (add owner context/instructions used in future replies)
-- `/feed` (view latest stored owner feed memory)
-- `/text <knowledge>` (store shared knowledge for all future replies)
-- `/text` (view latest shared knowledge notes)
-- `/data <user_id> <text>` (store manual about-data for any user, even if they never interacted)
-- `/ignore <user_id>` (alias: `/ingore <user_id>`) so bot will not reply to that user in groups
-- `/clear_user <user_id>`
-- `/reply <user_id> <message>`
+- `/stats`: View bot usage statistics.
+- `/ignore <user_id|@username>` (alias: `/ingore`): Block a user from interacting with the bot in groups. Can also be used by replying to a user's message.
+- `/clear_user <user_id>`: Reset memory and history for a specific user.
+- `/reply <user_id> <message>`: Send a direct message to a user via the bot.
 
 ## Group Admin Commands (Owner or Group Admins)
 - `/rules <welcome text> {Button Name https://url}`: Sets the welcome message and optional inline buttons.
   - Use `{name}` for the user's first name and `{username}` for their @username.
   - Example: `/rules Welcome {name}! {Support https://t.me/support}`
-- `/test_welcome`: Displays the current welcome message as a test.
 - `/check_bot`: Verify bot permissions and authorization in the current group.
 - `/id`: Show the current Chat ID.
 - `/mute`: (Reply only) Mutes the replied-to user (removes all sending permissions).

@@ -164,8 +164,8 @@ export class MemoryService {
     try {
       const updated = await GroupConfig.findOneAndUpdate(
         { chatId },
-        { 
-          $set: { rulesText, rulesButtons } 
+        {
+          $set: { rulesText, rulesButtons }
         },
         { upsert: true, new: true, lean: true }
       );
@@ -431,7 +431,7 @@ export class MemoryService {
   async addWarning(userId) {
     const targetUserId = Number(userId);
     if (!Number.isFinite(targetUserId)) return 0;
-    
+
     const updated = await UserMemory.findOneAndUpdate(
       { userId: targetUserId },
       {
@@ -451,7 +451,7 @@ export class MemoryService {
   async removeWarning(userId) {
     const targetUserId = Number(userId);
     if (!Number.isFinite(targetUserId)) return 0;
-    
+
     const doc = await UserMemory.findOne({ userId: targetUserId }).lean();
     if (!doc || !doc.warnings) return 0;
 

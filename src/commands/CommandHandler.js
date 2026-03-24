@@ -25,11 +25,8 @@ export class CommandHandler {
   async handleOwner(command, msg, text, args) {
     switch (command) {
       case '/stats': await ownerCommands.statsCommand(this.bot, msg, this.services); return true;
-      case '/memory': await ownerCommands.memoryCommand(this.bot, msg, args, this.services); return true;
-      case '/feed': await ownerCommands.feedCommand(this.bot, msg, text, this.services); return true;
-      case '/text': await ownerCommands.textCommand(this.bot, msg, text, this.services); return true;
-      case '/data': await ownerCommands.dataCommand(this.bot, msg, text, this.services); return true;
-      case '/ignore': await ownerCommands.ignoreCommand(this.bot, msg, args, this.services); return true;
+      case '/ignore':
+      case '/ingore': await ownerCommands.ignoreCommand(this.bot, msg, args, this.services); return true;
       case '/clear_user': await ownerCommands.clearUserCommand(this.bot, msg, args, this.services); return true;
       case '/reply': await ownerCommands.replyCommand(this.bot, msg, args, text); return true;
     }
