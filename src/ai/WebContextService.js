@@ -10,6 +10,24 @@ function containsAny(text, words) {
   return words.some((word) => lower.includes(word));
 }
 
+function extractFactualQuery(text) {
+  const lower = text.toLowerCase();
+  const factualTerms = ["president", "cm", "prime minister", "governor", "mayor", "capital", "population", "founder", "ceo"];
+  const triggerWords = ["who is", "who's", "what is", "what's", "tell me about", "who are", "current"];
+
+  const matchesTrigger = triggerWords.some(tw => lower.includes(tw));
+  const matchesTerm = factualTerms.some(ft => lower.includes(ft));
+
+  if (matchesTrigger || matchesTerm) {
+    // Basic extraction: take the whole sentence or a reasonable chunk
+    const cleaned = text.replace(/^[?\s]+|[?\s]+$/g, "").trim();
+    if (cleaned.length > 5 && cleaned.length < 100) {
+      return cleaned;
+    }
+  }
+  return null;
+}
+
 function weatherCodeLabel(code) {
   const map = {
     0: "clear sky",
@@ -146,6 +164,12 @@ export class WebContextService {
   async getTavilySummary(query) {
     if (!this.tavilyApiKey) return null;
     try {
+      // Append current year for potentially time-sensitive queries
+      const currentYear = new Date().getFullYear();
+      const enhancedQuery = query.toLowerCase().includes(String(currentYear)) 
+        ? query 
+        : `${query} ${currentYear} current status news`;
+
       const data = await fetchJson(
         "https://api.tavily.com/search",
         {
@@ -153,9 +177,9 @@ export class WebContextService {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             api_key: this.tavilyApiKey,
-            query: `${query} person profile biography`,
+            query: enhancedQuery,
             max_results: 3,
-            search_depth: "basic"
+            search_depth: "advanced"
           })
         },
         12000
@@ -251,15 +275,19 @@ export class WebContextService {
 
     const sections = [];
 
+    // Prioritize Factual Query over Person Query for broader coverage
+    const factualQuery = extractFactualQuery(text);
     const personQuery = extractPersonQuery(text);
-    if (personQuery) {
-      const wiki = await this.getWikipediaSummary(personQuery);
-      if (wiki?.text) {
-        sections.push(`Person info (${wiki.source}): ${wiki.text}`);
+    const searchQuery = factualQuery || personQuery;
+
+    if (searchQuery) {
+      const tavily = await this.getTavilySummary(searchQuery);
+      if (tavily?.text) {
+        sections.push(`Real-time info (${tavily.source}): ${tavily.text}`);
       } else {
-        const tavily = await this.getTavilySummary(personQuery);
-        if (tavily?.text) {
-          sections.push(`Person info (${tavily.source}): ${tavily.text}`);
+        const wiki = await this.getWikipediaSummary(searchQuery);
+        if (wiki?.text) {
+          sections.push(`Reference info (${wiki.source}): ${wiki.text}`);
         }
       }
     }
