@@ -10,18 +10,29 @@ function containsAny(text, words) {
   return words.some((word) => lower.includes(word));
 }
 
-function extractFactualQuery(text) {
+function extractFactualQuery(text, recentHistory = "") {
   const lower = text.toLowerCase();
   const factualTerms = ["president", "cm", "prime minister", "governor", "mayor", "capital", "population", "founder", "ceo"];
   const triggerWords = ["who is", "who's", "what is", "what's", "tell me about", "who are", "current"];
+  const correctionWords = ["no", "wrong", "incorrect", "actually", "false", "liar", "not true"];
 
   const matchesTrigger = triggerWords.some(tw => lower.includes(tw));
   const matchesTerm = factualTerms.some(ft => lower.includes(ft));
+  const matchesCorrection = correctionWords.some(cw => lower.includes(cw));
+
+  // If it's a correction or a very short message following a factual discussion, 
+  // try to extract context from recent history
+  if (matchesCorrection || (lower.length < 30 && recentHistory.toLowerCase().match(/(president|cm|prime minister|ceo|governor)/))) {
+     const historyTopic = recentHistory.match(/(president\s+of\s+[a-zA-Z\s]+|cm\s+of\s+[a-zA-Z\s]+|prime\s+minister\s+of\s+[a-zA-Z\s]+)/i);
+     if (historyTopic) {
+        return `${text} ${historyTopic[0]}`;
+     }
+  }
 
   if (matchesTrigger || matchesTerm) {
     // Basic extraction: take the whole sentence or a reasonable chunk
     const cleaned = text.replace(/^[?\s]+|[?\s]+$/g, "").trim();
-    if (cleaned.length > 5 && cleaned.length < 100) {
+    if (cleaned.length > 3 && cleaned.length < 100) {
       return cleaned;
     }
   }
@@ -269,14 +280,14 @@ export class WebContextService {
     }
   }
 
-  async buildContextForMessage(messageText) {
+  async buildContextForMessage(messageText, recentHistory = "") {
     const text = compactText(messageText, 600);
     if (!text) return null;
 
     const sections = [];
 
     // Prioritize Factual Query over Person Query for broader coverage
-    const factualQuery = extractFactualQuery(text);
+    const factualQuery = extractFactualQuery(text, recentHistory);
     const personQuery = extractPersonQuery(text);
     const searchQuery = factualQuery || personQuery;
 

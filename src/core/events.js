@@ -184,7 +184,7 @@ async function handleGroupMessage(bot, msg, services, commandHandler, config, st
   const ownerFeedNotes = await memoryService.getOwnerFeed(config.ownerUserId);
   const latestOwnerFeedNote = ownerFeedNotes.at(-1) || null;
   const ownerKnowledgeNotes = await memoryService.getOwnerKnowledge(config.ownerUserId);
-  const externalWebContext = await webContextService.buildContextForMessage(cleanedText || text);
+  const externalWebContext = await webContextService.buildContextForMessage(cleanedText || text, groupContext);
   const reply = await groqService.generateOwnerReply({
     assistantName: config.assistantName,
     ownerName: config.ownerName,
