@@ -196,6 +196,7 @@ export class GroqService {
               "If the user asks for an MCQ (Multiple Choice Question) or asks you to 'generate a question' (like for exams, AWS, etc.), YOU MUST RESPOND WITH A JSON OBJECT ONLY.",
               "If the user asks for multiple questions (e.g. 'mcq 5 about aws'), generate exactly that many JSON objects, one after another.",
               "The JSON object must have: { \"type\": \"poll\", \"question\": \"the question text\", \"options\": [\"opt1\", \"opt2\", \"opt3\", \"opt4\"], \"correct_option_index\": 0, \"explanation\": \"short explanation\" }.",
+              "CRITICAL: The 'correct_option_index' must be a 0-based index. If there are 4 options, the index must be 0, 1, 2, or 3. NEVER use an index out of bounds.",
               "The poll MUST be in 'quiz' mode (one correct answer).",
               "For ALL other normal conversation messages, respond with regular text as usual.",
               "You have been provided 'Shared owner knowledge' and 'Owner feed memory'.",
@@ -217,7 +218,6 @@ export class GroqService {
               `Recent Group Context:\n${groupContext || "None"}`,
               `Incoming message from user: ${messageText}`,
               `Known user memory for this specific user: ${JSON.stringify(memoryContext)}`,
-              `Owner feed memory: ${JSON.stringify((ownerFeedNotes || []).slice(-25))}`,
               `Latest owner feed note: ${latestOwnerFeedNote || "None"}`,
               `Shared owner knowledge (/text): ${JSON.stringify((ownerKnowledgeNotes || []).slice(-80))}`,
               `External realtime context (weather/news/wiki/tavily): ${externalWebContext || "None"}`
