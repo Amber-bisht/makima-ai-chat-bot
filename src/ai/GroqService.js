@@ -177,7 +177,7 @@ export class GroqService {
       const completion = await this.createCompletionWithFailover({
         model: this.model,
         temperature: 0.4,
-        max_tokens: 300,
+        max_tokens: 800,
         messages: [
           {
             role: "system",
@@ -194,6 +194,7 @@ export class GroqService {
               "Keep responses concise, conversational, and direct (1-4 short sentences).",
               "Do not ask too many questions to the user. Avoid ending your messages with questions unless absolutely necessary.",
               "If the user asks for an MCQ (Multiple Choice Question) or asks you to 'generate a question' (like for exams, AWS, etc.), YOU MUST RESPOND WITH A JSON OBJECT ONLY.",
+              "If the user asks for multiple questions (e.g. 'mcq 5 about aws'), generate exactly that many JSON objects, one after another.",
               "The JSON object must have: { \"type\": \"poll\", \"question\": \"the question text\", \"options\": [\"opt1\", \"opt2\", \"opt3\", \"opt4\"], \"correct_option_index\": 0, \"explanation\": \"short explanation\" }.",
               "The poll MUST be in 'quiz' mode (one correct answer).",
               "For ALL other normal conversation messages, respond with regular text as usual.",
