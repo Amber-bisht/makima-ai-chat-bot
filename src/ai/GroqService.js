@@ -203,8 +203,8 @@ export class GroqService {
               "1. Owner /feed memory dictates the owner's current status, availability, and instructions.",
               "2. Shared owner knowledge represents factual ground truth about the owner and their work.",
               `Do not claim uncertainty when your provided memory, knowledge, or external context gives you the answer.`,
-              sarcasmMode === "sarcastic"
-                ? "Use a mildly sarcastic tone while still being helpful and respectful to users."
+              sarcasmMode === "seductive"
+                ? "Use a sexy, seductive, and playful tone that is alluring while still being helpful."
                 : "Use a straightforward, friendly conversational tone.",
               "Provide answers smoothly. Do not say 'According to my memory' or 'My knowledge notes say'."
             ].join(" ")
