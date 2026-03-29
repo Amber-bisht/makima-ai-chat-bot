@@ -22,17 +22,36 @@ function normalizeStringArray(value) {
   return out;
 }
 
-export function extractJsonObject(text) {
-  if (!text) return null;
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start < 0 || end < start) return null;
-  const candidate = text.slice(start, end + 1);
-  try {
-    return JSON.parse(candidate);
-  } catch {
-    return null;
+export function extractJsonObjects(text) {
+  if (!text) return [];
+  const results = [];
+  let braceCount = 0;
+  let startIdx = -1;
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "{") {
+      if (braceCount === 0) startIdx = i;
+      braceCount++;
+    } else if (text[i] === "}") {
+      braceCount--;
+      if (braceCount === 0 && startIdx !== -1) {
+        const candidate = text.slice(startIdx, i + 1);
+        try {
+          const parsed = JSON.parse(candidate);
+          if (parsed && typeof parsed === "object") {
+            results.push(parsed);
+          }
+        } catch (e) {
+          // ignore invalid partial matches
+        }
+        startIdx = -1;
+      } else if (braceCount < 0) {
+        braceCount = 0;
+        startIdx = -1;
+      }
+    }
   }
+  return results;
 }
 
 function heuristicMemoryExtract(messageText) {
@@ -243,7 +262,8 @@ export class GroqService {
       });
 
       const content = completion.choices?.[0]?.message?.content || "";
-      const parsed = extractJsonObject(content);
+      const jsonObjects = extractJsonObjects(content);
+      const parsed = jsonObjects[0] || null;
       if (!parsed) {
         return heuristicMemoryExtract(messageText);
       }
