@@ -227,7 +227,7 @@ async function handleGroupMessage(bot, msg, services, commandHandler, config, st
 
       for (const pollData of polls) {
           try {
-              let correctIndex = parseInt(pollData.correct_option_index);
+              let correctIndex = parseInt(pollData.correct_option_id ?? pollData.correct_option_index);
               if (isNaN(correctIndex) || correctIndex < 0 || correctIndex >= pollData.options.length) {
                   correctIndex = 0; // fallback to first option if index is invalid
               }
@@ -235,7 +235,7 @@ async function handleGroupMessage(bot, msg, services, commandHandler, config, st
               await bot.sendPoll(msg.chat.id, pollData.question, pollData.options, {
                   is_anonymous: false,
                   type: "quiz",
-                  correct_option_index: correctIndex,
+                  correct_option_id: correctIndex,
                   explanation: pollData.explanation || "",
                   reply_to_message_id: msg.message_id
               });
