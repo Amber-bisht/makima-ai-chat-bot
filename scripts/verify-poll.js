@@ -1,26 +1,45 @@
-import { extractJsonObject } from "../src/ai/GroqService.js";
+import { extractJsonObjects } from "../src/ai/GroqService.js";
 
 const sampleReply = `
-Certainly! Here is an MCQ for you:
+Here are 3 AWS MCQs for you:
 {
   "type": "poll",
-  "question": "Which AWS service is used for object storage?",
-  "options": ["EC2", "S3", "RDS", "Lambda"],
-  "correct_option_index": 1,
-  "explanation": "S3 (Simple Storage Service) is the primary object storage service in AWS."
+  "question": "Q1?",
+  "options": ["A", "B"],
+  "correct_option_index": 0
 }
-Hope this helps!
+And another:
+{
+  "type": "poll",
+  "question": "Q2?",
+  "options": ["C", "D"],
+  "correct_option_index": 1
+}
+Good luck!
 `;
 
-const pollData = extractJsonObject(sampleReply);
-console.log("Extracted Poll Data:", pollData);
+const jsonObjects = extractJsonObjects(sampleReply);
+console.log("Extracted JSON Objects count:", jsonObjects.length);
 
-if (pollData && pollData.type === "poll" && pollData.question && Array.isArray(pollData.options)) {
-    console.log("✅ Verification Successful: Poll data correctly extracted.");
-    console.log("Question:", pollData.question);
-    console.log("Options:", pollData.options);
-    console.log("Correct Index:", pollData.correct_option_index);
+let textToReply = sampleReply;
+const polls = jsonObjects.filter(obj => obj.type === "poll");
+
+for (const obj of jsonObjects) {
+    try {
+        const jsonStr = JSON.stringify(obj);
+        // Note: replace might not work perfectly if formatting is different, 
+        // but our events.js also uses a regex fallback.
+        textToReply = textToReply.replace(jsonStr, "").trim();
+    } catch (e) {}
+}
+textToReply = textToReply.replace(/\{[\s\S]*?\}/g, "").trim();
+
+console.log("Remaining Text:", textToReply);
+console.log("Polls found:", polls.length);
+
+if (polls.length === 2 && textToReply.includes("Here are 3 AWS MCQs for you:") && textToReply.includes("Good luck!")) {
+    console.log("✅ Verification Successful: Multiple polls and text correctly handled.");
 } else {
-    console.error("❌ Verification Failed: Poll data not extracted correctly.");
+    console.error("❌ Verification Failed.");
     process.exit(1);
 }

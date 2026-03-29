@@ -8,7 +8,7 @@ import {
 } from "../utils/telegram.js";
 import { formatNotificationMessage } from "../utils/formatting.js";
 import { isContactRequestIntent } from "../ai/contactIntent.js";
-import { extractJsonObject } from "../ai/GroqService.js";
+import { extractJsonObjects } from "../ai/GroqService.js";
 
 function toCommand(text) {
   const [head] = text.trim().split(/\s+/);
@@ -203,21 +203,42 @@ async function handleGroupMessage(bot, msg, services, commandHandler, config, st
     fromName: displayName(msg.from)
   });
 
-  const pollData = extractJsonObject(reply);
-  if (pollData && pollData.type === "poll" && pollData.question && Array.isArray(pollData.options)) {
-      try {
-          await bot.sendPoll(msg.chat.id, pollData.question, pollData.options, {
-              is_anonymous: false,
-              type: "quiz",
-              correct_option_index: pollData.correct_option_index || 0,
-              explanation: pollData.explanation || "",
-              reply_to_message_id: msg.message_id
-          });
-          return;
-      } catch (pollErr) {
-          console.error("Failed to send native poll:", pollErr.message);
-          // fallback to regular message
+  const jsonObjects = extractJsonObjects(reply);
+  const polls = jsonObjects.filter(obj => obj.type === "poll" && obj.question && Array.isArray(obj.options));
+  
+  let textToReply = reply;
+  if (polls.length > 0) {
+      // Remove JSON blocks from the reply text to send the greeting/intro separately
+      for (const obj of jsonObjects) {
+          try {
+              const jsonStr = JSON.stringify(obj);
+              textToReply = textToReply.replace(jsonStr, "").trim();
+          } catch (e) {}
       }
+      // Also try to remove any remaining braces or leftover JSON-like strings if the stringify above was slightly different
+      textToReply = textToReply.replace(/\{[\s\S]*?\}/g, "").trim();
+
+      if (textToReply) {
+          await bot.sendMessage(msg.chat.id, textToReply, {
+              reply_to_message_id: msg.message_id,
+              allow_sending_without_reply: true
+          });
+      }
+
+      for (const pollData of polls) {
+          try {
+              await bot.sendPoll(msg.chat.id, pollData.question, pollData.options, {
+                  is_anonymous: false,
+                  type: "quiz",
+                  correct_option_index: pollData.correct_option_index || 0,
+                  explanation: pollData.explanation || "",
+                  reply_to_message_id: msg.message_id
+              });
+          } catch (pollErr) {
+              console.error("Failed to send native poll:", pollErr.message);
+          }
+      }
+      return;
   }
 
   await bot.sendMessage(msg.chat.id, reply, {
