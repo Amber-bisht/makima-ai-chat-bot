@@ -1,5 +1,7 @@
 import Groq from "groq-sdk";
 
+const MODEL_ID = "qwen/qwen3-32b";
+
 function compactText(value, maxLen = 240) {
   if (!value) return null;
   const cleaned = String(value).trim().replace(/\s+/g, " ");

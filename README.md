@@ -41,7 +41,7 @@ npm start
 - `MONGODB_URI`: MongoDB connection string
 - `GROQ_API_KEYS`: Comma-separated Groq API keys for fallback (example: `key1,key2,key3`)
 - `GROQ_API_KEY`: Optional single key fallback (used only when `GROQ_API_KEYS` is not set)
-- `GROQ_MODEL`: Groq model name (default: `llama-3.3-70b-versatile`)
+- `GROQ_MODEL`: Groq model name (default: `qwen/qwen3-32b`)
 - `NEWS_API_KEY`: NewsAPI key for live headlines/news questions
 - `TAVILY_API_KEY`: Tavily key for person/web fallback when Wikipedia data is missing
 - `CACHE_MAX_USERS`: Max user memories kept in in-memory index

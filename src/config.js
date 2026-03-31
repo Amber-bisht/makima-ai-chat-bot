@@ -71,6 +71,6 @@ export const config = {
   groqApiKeys,
   newsApiKey: process.env.NEWS_API_KEY?.trim() || null,
   tavilyApiKey: process.env.TAVILY_API_KEY?.trim() || null,
-  groqModel: process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile",
+  groqModel: process.env.GROQ_MODEL?.trim() || "qwen/qwen3-32b",
   cacheMaxUsers: Number(process.env.CACHE_MAX_USERS || 5000)
 };

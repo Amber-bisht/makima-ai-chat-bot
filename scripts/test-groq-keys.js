@@ -54,7 +54,7 @@ async function testOneKey({ key, model }) {
 }
 
 async function main() {
-  const model = process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
+  const model = process.env.GROQ_MODEL?.trim() || "qwen/qwen3-32b";
   const keys = resolveKeysFromInput();
 
   if (!keys.length) {
