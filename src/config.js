@@ -69,7 +69,6 @@ export const config = {
   authGroupIds: toNumberList(requiredEnv("AUTH_GROUP_IDS"), "AUTH_GROUP_IDS"),
   mongoUri: requiredEnv("MONGODB_URI"),
   groqApiKeys,
-  newsApiKey: process.env.NEWS_API_KEY?.trim() || null,
   tavilyApiKey: process.env.TAVILY_API_KEY?.trim() || null,
   groqModel: process.env.GROQ_MODEL?.trim() || "qwen/qwen3-32b",
   cacheMaxUsers: Number(process.env.CACHE_MAX_USERS || 5000)

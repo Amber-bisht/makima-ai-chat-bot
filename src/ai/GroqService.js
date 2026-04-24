@@ -151,21 +151,15 @@ export class GroqService {
     throw lastError;
   }
 
-  async generateOwnerReply({
+  async generateReply({
     assistantName,
-    ownerName,
-    ownerUsername,
     groupTitle,
     currentDateTime,
-    ownerFeedNotes,
-    latestOwnerFeedNote,
-    ownerKnowledgeNotes,
-    externalWebContext,
-    sarcasmMode,
     messageText,
     userMemory,
     groupContext,
-    fromName
+    fromName,
+    webContextService
   }) {
     const memoryContext = {
       name: userMemory?.name || null,
@@ -175,63 +169,119 @@ export class GroqService {
       conversationSummaries: userMemory?.conversationSummaries || []
     };
 
-    try {
-      const completion = await this.createCompletionWithFailover({
-        model: this.model,
-        temperature: 0.4,
-        max_tokens: 800,
-        messages: [
-          {
-            role: "system",
-            content: [
-              `You are ${assistantName}, the personal AI assistant to ${ownerName}.`,
-              `The owner's username is @${ownerUsername}.`,
-              `The current date and time is ${currentDateTime || new Date().toLocaleString()}.`,
-              `Knowledge Cutoff Note: Your internal training data is only up to mid-2023. FOR ANY QUESTIONS ABOUT CURRENT EVENTS, PUBLIC FIGURES, OR NEWS (like presidents, CMs, sports results), YOU MUST PRIORITIZE THE 'External realtime context' PROVIDED BELOW.`,
-              `If you have already established a fact in this conversation based on 'External realtime context' (e.g., who a current leader is), CONTINUE to use that fact in follow-up messages, even if newer context is not provided for every single turn. Do NOT revert to your 2023 knowledge if you have already 'learned' a newer fact earlier in this chat.`,
-              `Hallucination Guard: If 'External realtime context' is provided but doesn't clearly mention a specific name for a role (like a specific CM), do NOT guess or hallucinate a name. Instead, state what you know or admit the information is missing. Be extremely precise with names.`,
-              `If the 'External realtime context' contains information that contradicts your training data, YOU MUST USE THE EXTERNAL CONTEXT.`,
-              `Write replies in the first person as ${assistantName}. Only state that you are ${ownerName}'s assistant if explicitly asked who you are. Do not repeat it in every message.`,
-              `Do NOT impersonate ${ownerName}.`,
-              "Keep responses concise, conversational, and direct (1-4 short sentences).",
-              "Do not ask too many questions to the user. Avoid ending your messages with questions unless absolutely necessary.",
-              "If the user asks for an MCQ (Multiple Choice Question) or asks you to 'generate a question' (like for exams, AWS, etc.), YOU MUST RESPOND WITH A JSON OBJECT ONLY.",
-              "If the user asks for multiple questions (e.g. 'mcq 5 about aws'), generate exactly that many JSON objects, one after another.",
-              "The JSON object must have: { \"type\": \"poll\", \"question\": \"the question text\", \"options\": [\"opt1\", \"opt2\", \"opt3\", \"opt4\"], \"correct_option_id\": 0 }.",
-              "CRITICAL: The 'correct_option_id' must be a 0-based index. If there are 4 options, the index must be 0, 1, 2, or 3. NEVER use an index out of bounds.",
-              "The poll MUST be in 'quiz' mode (one correct answer).",
-              "For ALL other normal conversation messages, respond with regular text as usual.",
-              "You have been provided 'Shared owner knowledge' and 'Owner feed memory'.",
-              "1. Owner /feed memory dictates the owner's current status, availability, and instructions.",
-              "2. Shared owner knowledge represents factual ground truth about the owner and their work.",
-              `Do not claim uncertainty when your provided memory, knowledge, or external context gives you the answer.`,
-              sarcasmMode === "seductive"
-                ? "Use a sexy, seductive, and playful tone that is alluring while still being helpful."
-                : "Use a straightforward, friendly conversational tone.",
-              "Provide answers smoothly. Do not say 'According to my memory' or 'My knowledge notes say'."
-            ].join(" ")
-          },
-          {
-            role: "user",
-            content: [
-              `Current datetime: ${currentDateTime || new Date().toISOString()}`,
-              `Group: ${groupTitle || "Unknown Group"}`,
-              `User: ${fromName || "Unknown"}`,
-              `Recent Group Context:\n${groupContext || "None"}`,
-              `Incoming message from user: ${messageText}`,
-              `Known user memory for this specific user: ${JSON.stringify(memoryContext)}`,
-              `Latest owner feed note: ${latestOwnerFeedNote || "None"}`,
-              `Shared owner knowledge (/text): ${JSON.stringify((ownerKnowledgeNotes || []).slice(-80))}`,
-              `External realtime context (weather/news/wiki/tavily): ${externalWebContext || "None"}`
-            ].join("\n")
+    const messages = [
+      {
+        role: "system",
+        content: [
+          `You are ${assistantName}`,
+          `The current date and time is ${currentDateTime || new Date().toLocaleString()}.`,
+          `Knowledge Cutoff Note: Your internal training data is only up to mid-2023.`,
+          `FOR ANY QUESTIONS ABOUT CURRENT EVENTS, PUBLIC FIGURES, OR NEWS, USE THE 'web_search' TOOL.`,
+          `FOR GENERAL REFERENCE OR HISTORICAL FACTS ABOUT FAMOUS PEOPLE/PLACES, USE THE 'wiki_search' TOOL.`,
+          `Use the provided 'User memory' and 'Recent Group Context' to make your replies personal, context-aware, and relevant to the ongoing conversation.`,
+          `Write replies in the first person as ${assistantName}.`,
+          "Keep responses concise, conversational, and direct (1-4 short sentences).",
+          "If the user asks for an MCQ (Multiple Choice Question), YOU MUST RESPOND WITH A JSON OBJECT ONLY.",
+          "The JSON object must have: { \"type\": \"poll\", \"question\": \"the question text\", \"options\": [\"opt1\", \"opt2\", \"opt3\", \"opt4\"], \"correct_option_id\": 0 }.",
+          `Do not claim uncertainty when tools can give you the answer.`,
+          "Use a seductive and playful tone that is alluring."
+        ].join(" ")
+      },
+      {
+        role: "user",
+        content: [
+          `Current datetime: ${currentDateTime || new Date().toISOString()}`,
+          `Group: ${groupTitle || "Unknown Group"}`,
+          `User: ${fromName || "Unknown"}`,
+          `Recent Group Context:\n${groupContext || "None"}`,
+          `Incoming message: ${messageText}`,
+          `User memory: ${JSON.stringify(memoryContext)}`
+        ].join("\n")
+      }
+    ];
+
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "web_search",
+          description: "Search the web for current events, news, and real-time status updates.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "The search query." }
+            },
+            required: ["query"]
           }
-        ]
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "wiki_search",
+          description: "Get summary of a topic from Wikipedia for historical facts or biography.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "The topic or person name." }
+            },
+            required: ["query"]
+          }
+        }
+      }
+    ];
+
+    try {
+      // Step 1: Initial call to see if tools are needed
+      let completion = await this.createCompletionWithFailover({
+        model: this.model,
+        messages,
+        tools,
+        tool_choice: "auto",
+        temperature: 0.4,
+        max_tokens: 800
       });
 
-      const reply = completion.choices?.[0]?.message?.content?.trim();
+      let responseMessage = completion.choices[0].message;
+
+      // Step 2: Handle tool calls (up to 2 turns to prevent infinite loops)
+      for (let turn = 0; turn < 2; turn++) {
+        if (!responseMessage.tool_calls) break;
+
+        messages.push(responseMessage);
+
+        for (const toolCall of responseMessage.tool_calls) {
+          const functionName = toolCall.function.name;
+          const args = JSON.parse(toolCall.function.arguments);
+          let result = "";
+
+          if (functionName === "web_search") {
+            result = await webContextService.getWebSearch(args.query);
+          } else if (functionName === "wiki_search") {
+            result = await webContextService.getWikipediaSummary(args.query);
+          }
+
+          messages.push({
+            tool_call_id: toolCall.id,
+            role: "tool",
+            name: functionName,
+            content: result
+          });
+        }
+
+        completion = await this.createCompletionWithFailover({
+          model: this.model,
+          messages,
+          tools,
+          tool_choice: "auto"
+        });
+        responseMessage = completion.choices[0].message;
+      }
+
+      const reply = responseMessage.content?.trim();
       if (reply) return reply;
     } catch (error) {
-      console.error("Groq reply generation failed:", error.message);
+      console.error("Groq tool-call reply generation failed:", error.message);
     }
 
     const knownName = userMemory?.name || fromName || "there";

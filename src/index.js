@@ -20,7 +20,6 @@ async function bootstrap() {
     model: config.groqModel
   });
   const webContextService = new WebContextService({
-    newsApiKey: config.newsApiKey,
     tavilyApiKey: config.tavilyApiKey
   });
 

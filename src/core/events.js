@@ -1,13 +1,10 @@
 import {
-  containsOwnerMention,
   displayName,
   getMessageTextAndEntities,
   isGroupChat,
-  isPrivateChat,
-  stripOwnerMention
+  isPrivateChat
 } from "../utils/telegram.js";
 import { formatNotificationMessage } from "../utils/formatting.js";
-import { isContactRequestIntent } from "../ai/contactIntent.js";
 import { extractJsonObjects } from "../ai/GroqService.js";
 
 function toCommand(text) {
@@ -142,65 +139,23 @@ async function handleGroupMessage(bot, msg, services, commandHandler, config, st
   const ignoredUserIds = await memoryService.getIgnoredUserIds(config.ownerUserId);
   if (ignoredUserIds.includes(msg.from.id)) return;
 
-  const repliedToUserId = msg.reply_to_message?.from?.id || null;
-  const isReplyToBot = repliedToUserId === botUserId;
-  const isReplyToOwner = repliedToUserId === config.ownerUserId;
-  const hasOwnerMention = containsOwnerMention(
-    msg,
-    config.ownerUsername,
-    config.ownerUserId,
-    effectiveBotUsername,
-    botUserId
-  );
-  if (!hasOwnerMention && !isReplyToBot && !isReplyToOwner) return;
-
-  const cleanedText = hasOwnerMention
-    ? stripOwnerMention(text, config.ownerUsername, effectiveBotUsername)
-    : text.trim();
+  const userText = text.trim();
   await memoryService.touchUser(msg.from, msg.chat);
-  await memoryService.logGroupMessage(msg.chat, msg.from, cleanedText || text);
-
-  if (
-    isContactRequestIntent(cleanedText, config.ownerUsername, {
-      isReplyToBot,
-      isReplyToOwner
-    })
-  ) {
-    await bot.sendMessage(msg.chat.id, "Your message has been forwarded.", {
-      reply_to_message_id: msg.message_id,
-      allow_sending_without_reply: true
-    });
-    await memoryService.logContactRequest({
-      message: cleanedText || text,
-      user: msg.from,
-      chat: msg.chat
-    });
-    await sendOwnerNotification(bot, config, msg, cleanedText || text);
-    return;
-  }
+  await memoryService.logGroupMessage(msg.chat, msg.from, userText);
 
   const userMemory = await memoryService.getUserMemory(msg.from.id);
   const groupContextRaw = await memoryService.getGroupContext(msg.chat.id);
   const groupContext = groupContextRaw.map((m) => `[${m.name}]: ${m.text}`).join("\n");
-  const ownerFeedNotes = await memoryService.getOwnerFeed(config.ownerUserId);
-  const latestOwnerFeedNote = ownerFeedNotes.at(-1) || null;
-  const ownerKnowledgeNotes = await memoryService.getOwnerKnowledge(config.ownerUserId);
-  const externalWebContext = await webContextService.buildContextForMessage(cleanedText || text, groupContext);
-  const reply = await groqService.generateOwnerReply({
+
+  const reply = await groqService.generateReply({
     assistantName: config.assistantName,
-    ownerName: config.ownerName,
-    ownerUsername: config.ownerUsername,
     groupTitle: msg.chat.title,
     currentDateTime: new Date().toISOString(),
-    ownerFeedNotes,
-    latestOwnerFeedNote,
-    ownerKnowledgeNotes,
-    externalWebContext,
-    sarcasmMode: Math.random() < 0.5 ? "sarcastic" : "neutral",
-    messageText: cleanedText || text,
+    messageText: userText,
     userMemory,
     groupContext,
-    fromName: displayName(msg.from)
+    fromName: displayName(msg.from),
+    webContextService
   });
 
   const jsonObjects = extractJsonObjects(reply);
